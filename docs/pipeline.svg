@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330" viewBox="0 0 900 330" font-family="Segoe UI, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8ea0b5"/>
+    </marker>
+  </defs>
+  <rect width="900" height="330" fill="#0f1522"/>
+  <g stroke="#8ea0b5" stroke-width="2" marker-end="url(#arrow)" fill="none">
+    <line x1="150" y1="110" x2="196" y2="110"/>
+    <line x1="356" y1="110" x2="402" y2="110"/>
+    <line x1="562" y1="110" x2="608" y2="110"/>
+    <line x1="460" y1="170" x2="460" y2="216"/>
+  </g>
+  <g font-size="13">
+    <rect x="40" y="80" width="110" height="60" rx="10" fill="#1b2a44" stroke="#2f4f7a"/>
+    <text x="95" y="105" fill="#e8eef5" text-anchor="middle" font-size="14" font-weight="600">Camera</text>
+    <text x="95" y="125" fill="#8ea0b5" text-anchor="middle">BGR frames</text>
+
+    <rect x="200" y="80" width="156" height="60" rx="10" fill="#1b2a44" stroke="#2f4f7a"/>
+    <text x="278" y="105" fill="#e8eef5" text-anchor="middle" font-size="14" font-weight="600">MediaPipe Tasks</text>
+    <text x="278" y="125" fill="#8ea0b5" text-anchor="middle">21 × 3 landmarks</text>
+
+    <rect x="406" y="80" width="156" height="60" rx="10" fill="#1b2a44" stroke="#2f4f7a"/>
+    <text x="484" y="105" fill="#e8eef5" text-anchor="middle" font-size="14" font-weight="600">Invariant features</text>
+    <text x="484" y="125" fill="#8ea0b5" text-anchor="middle">translate · scale · rotate</text>
+
+    <rect x="612" y="80" width="120" height="60" rx="10" fill="#26333d" stroke="#d3a036"/>
+    <text x="672" y="105" fill="#e8eef5" text-anchor="middle" font-size="14" font-weight="600">Classifier</text>
+    <text x="672" y="125" fill="#8ea0b5" text-anchor="middle">letter + prob</text>
+
+    <rect x="330" y="220" width="260" height="70" rx="10" fill="#22331f" stroke="#4eaa5e"/>
+    <text x="460" y="248" fill="#e8eef5" text-anchor="middle" font-size="14" font-weight="600">Stabiliser → TextSession</text>
+    <text x="460" y="270" fill="#8ea0b5" text-anchor="middle" font-size="12.5">commits once · builds words · space / delete</text>
+
+    <text x="484" y="172" fill="#6d8099" text-anchor="middle" font-size="11" transform="translate(0,0)">
+      97.8% top-1 · 99.3% top-3
+    </text>
+    <text x="700" y="230" fill="#6d8099" font-size="12">pure state machine,</text>
+    <text x="700" y="248" fill="#6d8099" font-size="12">unit tested, no I/O</text>
+    <text x="40" y="308" fill="#4d5c70" font-size="12">models/asl_letters.joblib · docs/eval/metrics.json</text>
+  </g>
+</svg>

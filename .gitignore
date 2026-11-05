@@ -1,0 +1,16 @@
+# Local state
+.venv/
+data/
+!data/.keep
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

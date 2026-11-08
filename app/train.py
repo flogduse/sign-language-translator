@@ -17,13 +17,16 @@ Design notes
 * Model choice is measured, not assumed: three cheap, diverse classifiers are
   trained and the comparison lands in `metrics.json` next to the winner.
 * Class 26 ('del'), 27 ('nothing'), 28 ('space') are kept when well-populated;
-  single-sample classes are dropped and reported so the count stays honest.
+  under-populated classes are dropped and reported in `metrics.json`
+  (`dropped_classes`), so the class count never silently disagrees with the
+  README.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import joblib
@@ -39,20 +42,39 @@ from .features import N_FEATURES, to_features
 
 LETTERS = [chr(ord("A") + i) for i in range(26)] + ["DELETE", "NOTHING", "SPACE"]
 MIN_CLASS_SAMPLES = 5
+TEST_SIZE = 0.15
 RANDOM_SEED = 11
 
 
-def load_dataset(path: Path) -> tuple[np.ndarray, np.ndarray, list[str], list[int]]:
+@dataclass(frozen=True)
+class Dataset:
+    """Landmark features plus the class contract they were built against."""
+
+    X: np.ndarray
+    y: np.ndarray
+    class_ids: list[int]       # the ids the classifier actually emits
+    class_names: list[str]     # display names, index-aligned with class_ids
+    dropped: dict[str, int]    # name -> sample count, dropped by MIN_CLASS_SAMPLES
+
+
+def load_dataset(path: Path) -> Dataset:
     data = np.load(path)
     X_raw, y = data["landmarks"], data["labels"].astype(np.int64)
     labels, counts = np.unique(y, return_counts=True)
-    dropped = {name(i): int(c) for i, c in zip(labels, counts) if c < MIN_CLASS_SAMPLES}
+    dropped = {name(int(i)): int(c) for i, c in zip(labels, counts) if c < MIN_CLASS_SAMPLES}
     keep = np.isin(y, labels[counts >= MIN_CLASS_SAMPLES])
     Xr, kept = X_raw[keep], y[keep]
     if dropped:
         print(f"dropped low-population classes: {dropped}")
     X = np.stack([to_features(x) for x in Xr])
-    return X, kept, [name(i) for i in np.unique(kept)], []
+    class_ids = [int(i) for i in np.unique(kept)]
+    return Dataset(
+        X=X,
+        y=kept,
+        class_ids=class_ids,
+        class_names=[name(i) for i in class_ids],
+        dropped=dropped,
+    )
 
 
 def name(index: int) -> str:
@@ -105,15 +127,28 @@ def main() -> int:
     parser.add_argument("--out-confusion", type=Path, default=Path("docs/eval/confusion.png"))
     args = parser.parse_args()
 
-    X, y, class_names, _ = load_dataset(args.data)
+    ds = load_dataset(args.data)
+    X, y, class_names = ds.X, ds.y, ds.class_names
     print(f"samples: {len(y)}   classes: {len(class_names)}   features: {N_FEATURES}")
 
     Xtr, Xte, ytr, yte = train_test_split(
-        X, y, test_size=0.15, stratify=y, random_state=RANDOM_SEED
+        X, y, test_size=TEST_SIZE, stratify=y, random_state=RANDOM_SEED
     )
     print(f"train: {len(ytr)}   test: {len(yte)}")
 
-    metrics: dict = {"random_seed": RANDOM_SEED, "samples": len(y), "classes": class_names, "models": {}}
+    metrics: dict = {
+        "random_seed": RANDOM_SEED,
+        "samples": len(y),
+        "test_split": TEST_SIZE,
+        "min_class_samples": MIN_CLASS_SAMPLES,
+        # `class_ids` are what the classifier emits; `classes` is their display
+        # names. Both are recorded so position is never mistaken for class id
+        # (class 27 is absent here, and that is not the same as "SPACE").
+        "class_ids": ds.class_ids,
+        "classes": class_names,
+        "dropped_classes": ds.dropped,
+        "models": {},
+    }
     best_name, best_model, best_acc = None, None, -1.0
 
     for name_key, model in build_models().items():
@@ -123,10 +158,12 @@ def main() -> int:
         probs = model.predict_proba(Xte)
         preds = model.classes_[probs.argmax(axis=1)] if hasattr(model, "classes_") else model.predict(Xte)
         acc = accuracy_score(yte, preds)
+        top3 = top_k_accuracy_score(yte, probs, k=3)
         report = classification_report(yte, preds, output_dict=True, zero_division=0)
-        print(f"{name_key:14s} acc={acc:.4f} top3={top_k_accuracy_score(yte, probs, k=3):.4f} ({elapsed:.1f}s)")
+        print(f"{name_key:14s} acc={acc:.4f} top3={top3:.4f} ({elapsed:.1f}s)")
         metrics["models"][name_key] = {
             "accuracy": round(acc, 4),
+            "top3_accuracy": round(top3, 4),
             "precision_macro": round(report["macro avg"]["precision"], 4),
             "recall_macro": round(report["macro avg"]["recall"], 4),
             "per_class": {
@@ -145,11 +182,6 @@ def main() -> int:
 
     winner = best_model
     print(f"\nbest: {best_name} acc={best_acc:.4f}")
-
-    classes = np.unique(y)
-    def pretty(targets: np.ndarray) -> list[str]:
-        # `winner` predicts integer class ids; str-ify the label for humans.
-        return [name(int(t)) for t in targets]
 
     preds = winner.predict(Xte)
     cm = confusion_matrix([name(int(t)) for t in yte], [name(int(p)) for p in preds], labels=class_names)

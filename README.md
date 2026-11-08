@@ -13,8 +13,11 @@ webcam → hand landmarks (21×3) → invariant features (63) → classifier →
         words buffer · SPACE ends a word · DELETE eats a letter
 ```
 
-- **97.8% top-1 / 99.3% top-3** on a held-out split of a 63,580-sample landmark
-  corpus (29 classes: A-Z, delete, nothing, space). Full per-class breakdown in
+- **97.8% top-1 / 99.3% top-3** on a held-out 15% split of a 63,580-sample
+  landmark corpus. 28 of the 29 classes are scored: `NOTHING` has a single
+  sample, so the `MIN_CLASS_SAMPLES = 5` rule drops it — and `metrics.json`
+  records that under `dropped_classes`, so the class count can never drift from
+  what was actually measured. Full per-class breakdown in
   `docs/eval/metrics.json` and `docs/eval/confusion.png`.
 - Classification is deliberately *cheap*: scikit-learn trees, a 6 MB model file —
   no GPU, no training-from-scratch pipeline required to demo.
@@ -68,6 +71,11 @@ docs/eval/      metrics.json, confusion.png
 ## What the eval measures, honestly
 
 `metrics.json` reports results on a stratified 15% test split of the corpus.
+
+One class is *not* in that report: `NOTHING` appears exactly once in the corpus,
+and a single sample cannot be stratified, so it is dropped by the
+`MIN_CLASS_SAMPLES = 5` rule. The drop is written to `metrics.json` rather than
+silently changing the denominator — 29 classes in the label contract, 28 scored.
 
 | model | accuracy | top-3 |
 |---|---:|---:|

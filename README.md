@@ -52,20 +52,45 @@ python -m app.realtime --selftest                # no camera: score the bundled 
 
 In the window: `space` ends a word, `x` deletes, `c` clears, `q` quit.
 
+## Try it without a camera
+
+A single-frame Streamlit demo runs on the same model:
+
+```bash
+pip install -r requirements-demo.txt
+streamlit run app/streamlit_demo.py
+```
+
+Photograph one handshape, get one letter, build text with the Space/Delete/Clear
+buttons. This is intentionally narrower than the live loop: **one photo per
+letter, no temporal stabilisation, J and Z unsupported**, and the browser camera
+replaces `cv2.VideoCapture` so it can also be hosted. To publish it:
+
+```bash
+pip install huggingface_hub
+hf auth login
+python scripts/deploy_hf_space.py --repo-id <user>/asl-fingerspelling
+```
+
+No token beyond your HF login and no GPU are needed.
+
 ## Architecture
 
 ```
 app/
-  features.py   landmark geometry → 63 invariant features (pure, tested)
-  translator.py confidence-stabilised letter commits → text (pure, tested)
-  model.py      joblib model + class-id → letter contract
-  landmarks.py  MediaPipe Tasks hand landmarker (VIDEO mode) + skeleton drawing
-  realtime.py   camera loop, HUD, keyboard controls, --selftest
-  train.py      trains 3 different classifiers, keeps the best, writes metrics
+  features.py       landmark geometry → 63 invariant features (pure, tested)
+  translator.py     confidence-stabilised letter commits → text (pure, tested)
+  demo_logic.py     text rules for the single-frame demo (pure, tested)
+  model.py          joblib model + class-id → letter contract
+  landmarks.py      MediaPipe Tasks hand landmarker (VIDEO mode) + skeleton drawing
+  realtime.py       camera loop, HUD, keyboard controls, --selftest
+  streamlit_demo.py browser-camera demo (one photo → one letter)
+  train.py          trains 3 different classifiers, keeps the best, writes metrics
 tests/
-scripts/        download_data.py — fetches the landmark corpus
-models/         bundled trained model + labels.json
-docs/eval/      metrics.json, confusion.png
+scripts/            download_data.py (corpus), deploy_hf_space.py (Streamlit Space)
+models/             bundled trained model + labels.json
+docs/eval/          metrics.json, confusion.png
+deploy/huggingface/ Space metadata for the demo
 ```
 
 ## What the eval measures, honestly
@@ -132,6 +157,7 @@ pip install kagglehub && python -c "import kagglehub; kagglehub.dataset_download
 - [ ] Personal-calibration mode: collect 20 samples per letter and hot-swap the model
 - [ ] A video-based letters corpus for the motion letters
 - [ ] README GIF of the actual overlay
+- [x] Browser-camera demo (`app/streamlit_demo.py`, deployable to a Streamlit Space)
 
 ## License
 
